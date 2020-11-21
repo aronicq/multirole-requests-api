@@ -1,0 +1,20 @@
+version: "3"
+
+services:
+  db:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: password
+    ports:
+    - 5432:5432
+
+  flask_app:
+    build: .
+    volumes:
+    - ./flask_api:/flask_api
+    command:
+      python main.py
+    ports:
+    - 5000:5000
+    depends_on:
+      - db
