@@ -1,8 +1,9 @@
 import datetime
-
-import pytz as pytz
+import pytz
 from db import Base
-from sqlalchemy import Column, Integer, String, Date, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, Boolean, ForeignKey, Table
+from sqlalchemy.orm import relationship, backref
+
 
 class FunctionsRoles(Base):
     __tablename__ = 'functions_roles_table'
@@ -11,11 +12,20 @@ class FunctionsRoles(Base):
     name = Column(String)
 
 
-class RolesTable(Base):
-    __tablename__ = 'user_roles_table'
+class Roles(Base):
+    __tablename__ = 'roles'
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
+    # allowed_methods = Column(String)
+
+    users = relationship('Users', secondary='users_roles', backref=backref('role'))
+
+
+users_to_roles = Table('users_roles', Base.metadata,
+                       Column('user_id', Integer, ForeignKey('users.id')),
+                       Column('role_id', Integer, ForeignKey('roles.id'))
+                       )
 
 
 class Users(Base):
@@ -23,18 +33,12 @@ class Users(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    role_id = Column(Integer, ForeignKey(RolesTable.id))
-    is_user = Column(Boolean)
-    is_operator = Column(Boolean)
-    is_admin = Column(Boolean)
 
     @property
     def serialize(self):
         return {'id': self.id,
                 'name': self.name,
-                'is_user': self.is_user,
-                'is_operator': self.is_operator,
-                'is_admin': self.is_admin}
+                }
 
 
 class Queries(Base):
@@ -44,13 +48,15 @@ class Queries(Base):
     text = Column(String)
     state = Column(Integer)
     created = Column(Date, default=datetime.datetime.now(tz=pytz.timezone('Europe/Moscow')))
+    author = Column(String)
 
     @property
     def serialize(self):
         return {'id': self.id,
                 'text': self.text,
                 'state': self.state,
-                'created': self.created}
+                'created': self.created,
+                'author': self.author}
 
     def __repr__(self):
         return 'text: {}, state: {}, date: {}'.format(self.text, self.state, self.created)
