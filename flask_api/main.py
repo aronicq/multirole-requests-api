@@ -1,3 +1,5 @@
+import sys
+
 from flask import Flask, request, jsonify
 import sqlalchemy
 from db import db_session
@@ -25,7 +27,7 @@ def check_rights(required_role, action):
 def create():
     is_allowed = check_rights('User', "create Queries")
     if not is_allowed['result']:
-        return is_allowed['error']
+        return jsonify({'text': is_allowed['error']})
 
     new_request = Queries(text=request.args.get('text'), state=1, author=request.args.get('user'))
     db_session.add(new_request)
@@ -39,7 +41,7 @@ def create():
 def edit():
     is_allowed = check_rights('User', "edit Queries")
     if not is_allowed['result']:
-        return is_allowed['error']
+        return jsonify({'text': is_allowed['error']})
 
     query_to_edit = db_session.query(Queries).filter(Queries.id == request.args.get('id'), Queries.author == request.args.get('user')).first()
 
@@ -57,7 +59,7 @@ def edit():
 def send():
     is_allowed = check_rights('User', "send Queries")
     if not is_allowed['result']:
-        return is_allowed['error']
+        return jsonify({'text': is_allowed['error']})
 
     query_to_update = db_session.query(Queries).filter(Queries.id == request.args.get('id'), Queries.author == request.args.get('user')).first()
 
@@ -76,7 +78,7 @@ def send():
 def view():
     is_allowed = check_rights('User', "view your Queries")
     if not is_allowed['result']:
-        return is_allowed['error']
+        return jsonify({'text': is_allowed['error']})
 
     requester_query = db_session.query(Queries).filter(Queries.author == request.args.get('user')).all()
     return jsonify([i.serialize for i in requester_query])
@@ -86,17 +88,25 @@ def view():
 def list_req():
     is_allowed = check_rights('Operator', "view requested Queries")
     if not is_allowed['result']:
-        return is_allowed['error']
+        return jsonify({'text': is_allowed['error']})
 
     result_list = db_session.query(Queries).filter(Queries.state == 2).order_by(sqlalchemy.desc(Queries.created)).all()
-    return jsonify([i.serialize for i in result_list])
+    if not result_list:
+        return jsonify([i.serialize for i in result_list])
+
+    result_list = [i.serialize for i in result_list]
+    for i in result_list:
+        i['text'] = "-".join(i['text'])
+
+    print(result_list[0]['text'], file=sys.stderr)
+    return jsonify(result_list)
 
 
 @app.route('/accept')
 def accept():
     is_allowed = check_rights('Operator', "accept Queries")
     if not is_allowed['result']:
-        return is_allowed['error']
+        return jsonify({'text': is_allowed['error']})
 
     query_to_accept = db_session.query(Queries).get(request.args.get('id'))
 
@@ -116,7 +126,7 @@ def accept():
 def decline():
     is_allowed = check_rights('Operator', "decline Queries")
     if not is_allowed['result']:
-        return is_allowed['error']
+        return jsonify({'text': is_allowed['error']})
 
     query_to_decline = db_session.query(Queries).get(request.args.get('id'))
 
@@ -136,7 +146,7 @@ def decline():
 def list_users():
     is_allowed = check_rights('Admin', "view Users")
     if not is_allowed['result']:
-        return is_allowed['error']
+        return jsonify({'text': is_allowed['error']})
 
     all_users = db_session.query(Users).all()
 
@@ -153,7 +163,7 @@ def list_users():
 def define_rights():
     is_allowed = check_rights('Admin', "define Roles")
     if not is_allowed['result']:
-        return is_allowed['error']
+        return jsonify({'text': is_allowed['error']})
 
     user_to_define_rights = db_session.query(Users).get(request.args.get('id'))
 
@@ -162,7 +172,7 @@ def define_rights():
         user_to_define_rights.role.append(operator_role)
         db_session.commit()
     else:
-        return "User is already processed"
+        return jsonify({'text': "User is already processed"})
     return user_to_define_rights.serialize
 
 
