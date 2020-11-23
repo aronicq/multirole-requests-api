@@ -1,3 +1,3 @@
 # multirole-requests-api
 
-Запуск: docker-copose up
+Запуск: docker-compose up
